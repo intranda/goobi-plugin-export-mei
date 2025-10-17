@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<project default="devbuild">
+
+        <!-- Use this task to let ant copy the compiled jar files to the target folders for development  -->
+        <target name="devbuild">
+                <exec executable="mvn">
+                        <arg value="package"/>
+                </exec>
+                <copy file="target/plugin_intranda_export_kick_start.jar" todir="/opt/digiverso/goobi/plugins/export/" overwrite="true"/>
+        </target>
+
+</project>
