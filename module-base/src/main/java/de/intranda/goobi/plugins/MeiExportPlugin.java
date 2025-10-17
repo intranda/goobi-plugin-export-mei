@@ -33,10 +33,10 @@ import ugh.exceptions.WriteException;
 
 @PluginImplementation
 @Log4j2
-public class KickStartExportPlugin implements IExportPlugin, IPlugin {
+public class MeiExportPlugin implements IExportPlugin, IPlugin {
 
     @Getter
-    private String title = "intranda_export_kick_start";
+    private String title = "intranda_export_mei";
     @Getter
     private PluginType type = PluginType.Export;
     @Getter

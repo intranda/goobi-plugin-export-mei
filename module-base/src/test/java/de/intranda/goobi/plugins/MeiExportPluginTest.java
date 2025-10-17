@@ -26,7 +26,7 @@ import de.sub.goobi.config.ConfigPlugins;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ ConfigPlugins.class })
 @PowerMockIgnore({ "javax.management.*", "javax.net.ssl.*", "jdk.internal.reflect.*" })
-public class KickStartExportPluginTest {
+public class MeiExportPluginTest {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -63,12 +63,12 @@ public class KickStartExportPluginTest {
 
     @Test
     public void testConstructor() {
-        KickStartExportPlugin plugin = new KickStartExportPlugin();
+        MeiExportPlugin plugin = new MeiExportPlugin();
         assertNotNull(plugin);
     }
 
     private XMLConfiguration getConfig() {
-        String file = "plugin_intranda_export_kick_start.xml";
+        String file = "plugin_intranda_export_mei.xml";
         XMLConfiguration config = new XMLConfiguration();
         config.setDelimiterParsingDisabled(true);
         try {
