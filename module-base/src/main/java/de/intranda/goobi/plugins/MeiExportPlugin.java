@@ -107,94 +107,106 @@ public class MeiExportPlugin extends ExportDms implements IExportPlugin, IPlugin
                 | DAOException e) {
             log.error(e);
         }
+        if (success) {
 
-        Path metsPath = Paths.get(tempFolder, process.getTitel() + "_mets.xml");
+            Path metsPath = Paths.get(tempFolder, process.getTitel() + "_mets.xml");
 
-        // open generated file
-        Document doc = XmlTools.readDocumentFromFile(metsPath);
-        Element mets = doc.getRootElement();
-        // find fileSec
-        Element fileSec = mets.getChild("fileSec", METS_NAMESPACE);
+            // open generated file
+            Document doc = XmlTools.readDocumentFromFile(metsPath);
+            Element mets = doc.getRootElement();
+            // find fileSec
+            Element fileSec = mets.getChild("fileSec", METS_NAMESPACE);
 
-        // find physical structMap
-        Element physSequence = null;
-        for (Element e : mets.getChildren("structMap", METS_NAMESPACE)) {
-            if ("PHYSICAL".equals(e.getAttributeValue("TYPE"))) {
-                physSequence = e.getChild("div", METS_NAMESPACE);
-            }
-        }
-
-        // get additional fileGrp information from configuration
-        List<AdditionalFileGroup> filegroups = getFilegroupConfiguration(process);
-        for (AdditionalFileGroup fg : filegroups) {
-            // check, if a folder check is configured
-            String actualFolder = null;
-            String filename = null;
-            if (StringUtils.isNotBlank(fg.getFolder())) {
-                actualFolder = process.getConfiguredImageFolder(fg.getFolder());
+            // find physical structMap
+            Element physSequence = null;
+            for (Element e : mets.getChildren("structMap", METS_NAMESPACE)) {
+                if ("PHYSICAL".equals(e.getAttributeValue("TYPE"))) {
+                    physSequence = e.getChild("div", METS_NAMESPACE);
+                }
             }
 
-            if (fg.isCheckExistence()) {
-                if (StringUtils.isBlank(actualFolder) || !StorageProvider.getInstance().isDirectory(Paths.get(actualFolder))) {
-                    // required folder does not exist, skip filegroup generation
-                    continue;
+            // get additional fileGrp information from configuration
+            List<AdditionalFileGroup> filegroups = getFilegroupConfiguration(process);
+            for (AdditionalFileGroup fg : filegroups) {
+                // check, if a folder check is configured
+                String actualFolder = null;
+                String filename = null;
+                if (StringUtils.isNotBlank(fg.getFolder())) {
+                    actualFolder = process.getConfiguredImageFolder(fg.getFolder());
                 }
 
-                if (fg.isFilenameFromFolder()) {
-                    List<String> filesInFolder = StorageProvider.getInstance().list(actualFolder);
-                    if (filesInFolder.isEmpty()) {
-                        // no files to export, skip filegroup generation
+                if (fg.isCheckExistence()) {
+                    if (StringUtils.isBlank(actualFolder) || !StorageProvider.getInstance().isDirectory(Paths.get(actualFolder))) {
+                        // required folder does not exist, skip filegroup generation
                         continue;
-                    } else {
-                        filename = filesInFolder.get(0);
+                    }
+
+                    if (fg.isFilenameFromFolder()) {
+                        List<String> filesInFolder = StorageProvider.getInstance().list(actualFolder);
+                        if (filesInFolder.isEmpty()) {
+                            // no files to export, skip filegroup generation
+                            continue;
+                        } else {
+                            filename = filesInFolder.get(0);
+                        }
+                    }
+                }
+                // if folder exists or no check is needed:
+                String path = filename == null ? fg.getPath() : fg.getPath() + filename;
+                path = replacer.replace(path);
+                // create new fileGrp
+                Element fileGrp = new Element("fileGrp", METS_NAMESPACE);
+                fileSec.addContent(fileGrp);
+                fileGrp.setAttribute("USE", fg.getName());
+                // create file element
+                Element file = new Element("file", METS_NAMESPACE);
+                fileGrp.addContent(file);
+
+                Element flocat = new Element("FLocat", METS_NAMESPACE);
+                file.addContent(flocat);
+
+                file.setAttribute("ID", fg.getName());
+                file.setAttribute("MIMETYPE", fg.getMimetype());
+
+                flocat.setAttribute("LOCTYPE", "URL");
+                flocat.setAttribute("href", path, xlink);
+
+                // assign file id to physSequence or logical element
+                Element fptr = new Element("fptr", METS_NAMESPACE);
+                fptr.setAttribute("FILEID", fg.getName());
+                physSequence.addContent(0, fptr);
+                // copy folder, if exportImages/exportOcr is set
+
+            }
+            XmlTools.saveDocument(doc, metsPath);
+
+            // if activated, export images / ocr files to destination
+            if (exportWithImages) {
+                imageDownload(process, Paths.get(destination), process.getTitel(), DIRECTORY_SUFFIX);
+            }
+            if (exportFulltext) {
+                fulltextDownload(process, Paths.get(destination), process.getTitel(), DIRECTORY_SUFFIX);
+            }
+
+            //  export additional folder to destination
+            for (AdditionalFileGroup fg : filegroups) {
+                if (fg.isExportContent()) {
+                    Path source = Paths.get(process.getConfiguredImageFolder(fg.getFolder()));
+                    if (StorageProvider.getInstance().isDirectory(source)) {
+                        Path dest = Paths.get(destination, source.getFileName().toString());
+                        StorageProvider.getInstance().copyDirectory(source, dest);
                     }
                 }
             }
-            // if folder exists or no check is needed:
-            String path = filename == null ? fg.getPath() : fg.getPath() + filename;
-            path = replacer.replace(path);
-            // create new fileGrp
-            Element fileGrp = new Element("fileGrp", METS_NAMESPACE);
-            fileSec.addContent(fileGrp);
-            fileGrp.setAttribute("USE", fg.getName());
-            // create file element
-            Element file = new Element("file", METS_NAMESPACE);
-            fileGrp.addContent(file);
 
-            Element flocat = new Element("FLocat", METS_NAMESPACE);
-            file.addContent(flocat);
+            // move temp mets file  (and anchor file) to its destination
+            Path metsDestination = Paths.get(destination, metsPath.getFileName().toString());
+            StorageProvider.getInstance().move(metsPath, metsDestination);
+            Path anchorSource = Paths.get(metsPath.toString().replace(".xml", "_anchor.xml"));
+            Path anchorDestination = Paths.get(destination, anchorSource.getFileName().toString());
 
-            file.setAttribute("ID", fg.getName());
-            file.setAttribute("MIMETYPE", fg.getMimetype());
-
-            flocat.setAttribute("LOCTYPE", "URL");
-            flocat.setAttribute("href", path, xlink);
-
-            // assign file id to physSequence or logical element
-            Element fptr = new Element("fptr", METS_NAMESPACE);
-            fptr.setAttribute("FILEID", fg.getName());
-            physSequence.addContent(0, fptr);
-            // copy folder, if exportImages/exportOcr is set
-
-        }
-        XmlTools.saveDocument(doc, metsPath);
-
-        // TODO move temp mets file  (and anchor file) to its destination
-
-        // if activated, export images / ocr files to destination
-        if (exportWithImages) {
-            imageDownload(process, Paths.get(destination), process.getTitel(), DIRECTORY_SUFFIX);
-        }
-        if (exportFulltext) {
-            fulltextDownload(process, Paths.get(destination), process.getTitel(), DIRECTORY_SUFFIX);
-        }
-
-        //  export additional folder to destination
-        for (AdditionalFileGroup fg : filegroups) {
-            if (fg.isExportContent()) {
-                Path source = Paths.get(process.getConfiguredImageFolder(fg.getFolder()));
-                Path dest = Paths.get(destination, source.getParent().getFileName().toString(), source.getFileName().toString());
-                StorageProvider.getInstance().copyDirectory(source, dest);
+            if (StorageProvider.getInstance().isFileExists(anchorSource)) {
+                StorageProvider.getInstance().move(anchorSource, anchorDestination);
             }
         }
         return success;

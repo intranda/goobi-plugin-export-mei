@@ -1,6 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <config_plugin>
- 
-    <!-- sample parameter -->
-    <value>test</value>
+    <config>
+        <project>*</project>
 
+        <additionalFileGroup
+            name="MEI"
+            path="https://viewer.example.org/content/$(meta.CatalogIDDigital)/1000/0/"
+            mimetype="application/xml"
+            suffix="xml">
+            <folder 
+                exportContent="true" 
+                checkExistence="true" 
+                filenameFromFolder="true">ocr.mei</folder>
+        </additionalFileGroup>
+
+        <additionalFileGroup
+            name="COMPLETE_PDF"
+            path="https://viewer.example.org/content/$(meta.CatalogIDDigital)/$(meta.CatalogIDDigital).pdf"
+            mimetype="application/pdf"
+            suffix="pdf">
+            <folder 
+                exportContent="false" 
+                checkExistence="true" 
+                filenameFromFolder="false">media</folder>
+        </additionalFileGroup>
+    </config>
 </config_plugin>
