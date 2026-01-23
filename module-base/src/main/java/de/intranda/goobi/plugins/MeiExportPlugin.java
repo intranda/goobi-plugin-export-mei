@@ -175,8 +175,6 @@ public class MeiExportPlugin extends ExportDms implements IExportPlugin, IPlugin
                 Element fptr = new Element("fptr", METS_NAMESPACE);
                 fptr.setAttribute("FILEID", fg.getName());
                 physSequence.addContent(0, fptr);
-                // copy folder, if exportImages/exportOcr is set
-
             }
             XmlTools.saveDocument(doc, metsPath);
 
@@ -200,10 +198,10 @@ public class MeiExportPlugin extends ExportDms implements IExportPlugin, IPlugin
             }
 
             // move temp mets file  (and anchor file) to its destination
-            Path metsDestination = Paths.get(destination, metsPath.getFileName().toString());
+            Path metsDestination = Paths.get(destination, metsPath.getFileName().toString().replace("_mets.xml", ".xml"));
             StorageProvider.getInstance().move(metsPath, metsDestination);
             Path anchorSource = Paths.get(metsPath.toString().replace(".xml", "_anchor.xml"));
-            Path anchorDestination = Paths.get(destination, anchorSource.getFileName().toString());
+            Path anchorDestination = Paths.get(destination, metsDestination.getFileName().toString().replace(".xml", "_anchor.xml"));
 
             if (StorageProvider.getInstance().isFileExists(anchorSource)) {
                 StorageProvider.getInstance().move(anchorSource, anchorDestination);
