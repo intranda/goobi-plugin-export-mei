@@ -1,6 +1,7 @@
 package de.intranda.goobi.plugins;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -95,6 +96,8 @@ public class MeiExportPlugin extends ExportDms implements IExportPlugin, IPlugin
             problems.add("Cannot read metadata file.");
             return false;
         }
+
+        destination = replacer.replace(destination) + FileSystems.getDefault().getSeparator();
 
         String tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder();
         // export mets file into a temporary file
